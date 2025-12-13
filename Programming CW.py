@@ -94,7 +94,46 @@ def Encoder(input_img, output_img):
 ###########################################################################################################################################################################
 
 def Decoder(fileName):
-    pass
+    try:
+        f = open(fileName, 'rb')
+        imageData = f.read()
+    except FileNotFoundError:
+        print("File does not exsit")
+
+    bits = int.from_bytes(imageData[28:30], byteorder='little')
+    bytes = bits // 8
+    header = int.from_bytes(imageData[10:14], byteorder='little')
+    bitString = []
+
+
+    currPixel = header #keeps track of the pixel currently on, this is set to bytes_offset so that it starts exactly at the beggining of the pixel data 
+
+    #obtaining the bits that are stored in the LSB of ONLY the RGB channels
+    while currPixel < len(imageData):
+        for channel in range(3):
+            if currPixel + channel >= len(imageData):
+                break
+            bitString.append(imageData[currPixel + channel] & 1) #this line gets the binary number of each channel and uses an AND gate to get the LSB (& 1)
+            if len(bitString) >= 8 and bitString[-8:] == [0]*8: #detectes the delimiter added so that it stops looping through the pixels if reached (smart pixel looping)
+                currPixel = len(imageData) 
+                break
+        currPixel += bytes
+
+
+    # Converting the bits to bytes
+    message_bytes = []
+    for i in range(0, len(bitString), 8):
+        byte = bitString[i:i+8] #slices the bits so that they are groups of 8, creating 1 byte
+        if len(byte) < 8:
+            break
+        byte_value = int(''.join(str(b) for b in byte), 2) #this converts the 8 bits into an intger which is why we wrote the '2'
+        if byte_value == 0:  #We have reached delimiter so terminate loop
+            break
+        message_bytes.append(byte_value) #append the current byte value to the message_byte list
+
+    #converting the bytes to characters and letters to retrive the secret message
+    message = bytes(message_bytes).decode('utf-8', errors='ignore')
+    return message
 
 ###########################################################################################################################################################################
 
@@ -114,6 +153,11 @@ def mainMenu():
                 output_file = "mod.bmp"
             
             Encoder(input_file, output_file)
+            
+        elif choice == '2':
+            input_file = input("Enter BMP file to decode: ")
+            message = Decoder(input_file)
+            print(f"hidden message: {message}")
 
         elif choice == '3':
             print("Exiting program...")
