@@ -1,5 +1,6 @@
 ###########################################################################################################################################################################
 
+
 def Encoder(input_img, output_img):
     try:
         choice = int(input("Do you want to type a message(1) or enter a .txt file(2):")) #Duel input method
@@ -37,14 +38,14 @@ def Encoder(input_img, output_img):
         imageData = list(f.read()) #The contents of the image
         f.close()
     except FileNotFoundError:
-        print("File entered does not exsist.")
+        print(f"File:'{input_img}' does not exsist.")
         return
     
     bits = int.from_bytes(imageData[28:30], byteorder='little') #bits per pixel
-    bytes = bits // 8 #bytes per pixel
+    bytesPerPixel = bits // 8 #bytes per pixel
     header = int.from_bytes(imageData[10 : 14], byteorder='little') #stores the length of the header of the BMP image
 
-    if bytes < 3:
+    if bytesPerPixel < 3:
         print("This image is not supported (must be either 24 or 32 bit image)")
 
 
@@ -61,7 +62,7 @@ def Encoder(input_img, output_img):
         messageBits.append(0) #appends 8 zeros at the end message_bits to signal the end of the message (Delimiter)
 
 
-    pixels = (len(imageData) - header) // bytes #calculates total pixels in the image
+    pixels = (len(imageData) - header) // bytesPerPixel #calculates total pixels in the image
     freeBits = pixels * 3 #free space availble but this considers that each pixel contains 3 channels RGB (Alpha is skipped as it might affect the image greatly)
     if len(messageBits) > freeBits: 
         print("This message is too big for the image.")
@@ -80,15 +81,15 @@ def Encoder(input_img, output_img):
             #the line above CLEARS the LSB and replaces with the current message bit by using an 'AND' and an 'OR' logic gates
             currBit += 1 #move to the next bit in the RGB
 
-        currPixel += bytes #after we go through each channel and embed our message bit, we add 'bytes' to 'currPixel' to move to the next pixel in line
+        currPixel += bytesPerPixel #after we go through each channel and embed our message bit, we add 'bytes' to 'currPixel' to move to the next pixel in line
     
-
     try:
         file = open(output_img, 'wb')
         file.write(bytes(imageData)) #implements all of what we did in the new output file
         print(f"You're message has been sucessfully hidden in {output_img}.")
     except:
-        print("Error when writing to output image, please check file path permissions.")
+        print("Error. Can not write to the output image, check access writes of the folder")
+    
      
 
 ###########################################################################################################################################################################
@@ -101,7 +102,7 @@ def Decoder(fileName):
         print("File does not exsit")
 
     bits = int.from_bytes(imageData[28:30], byteorder='little')
-    bytes = bits // 8
+    bytesPerPixel = bits // 8
     header = int.from_bytes(imageData[10:14], byteorder='little')
     bitString = []
 
@@ -117,7 +118,7 @@ def Decoder(fileName):
             if len(bitString) >= 8 and bitString[-8:] == [0]*8: #detectes the delimiter added so that it stops looping through the pixels if reached (smart pixel looping)
                 currPixel = len(imageData) 
                 break
-        currPixel += bytes
+        currPixel += bytesPerPixel
 
 
     # Converting the bits to bytes
